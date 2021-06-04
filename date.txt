@@ -1,0 +1,58 @@
+nextupdate=$(echo | openssl crl -in ./issuing-ca4\(1\).crl -inform DER -noout -nextupdate | cut -d "=" -f 2)
+
+
+crl="issuing-ca4(1).crl"
+pem="issuing-ca4.pem"
+cabincrew="./certs/CabinCrew/CA/CabinCrew_CAandCRL_cert.pem"
+
+if [ -f "$crl" ] ; then
+    rm "$crl"
+fi
+
+
+if [ -f "$pem" ] ; then
+    rm "$pem"
+fi
+
+wget "http://pki.emirates.com/issuing-ca4(1).crl"
+
+
+if [ -f "$crl" ] ; then
+
+	openssl crl -in "$crl" -inform DER -out "$pem"
+
+	rm "$crl"
+
+	cat "$pem"
+else
+    echo "Unable to fetch CRL"
+    exit 1
+
+fi
+
+
+wget "http://pki.emirates.com/issuing-ca4(1).crl"
+
+openssl crl -in "$crl" -inform DER -out "$pem"
+
+rm "$crl"
+
+sed '/-----BEGIN X509 CRL-----/,$d' "$cabincrew" > temp && mv temp "$cabincrew"
+
+cat "$pem" >> "$cabincrew"
+
+rm "$pem"
+
+search="Airline"
+replace="CabinCrew"
+eap="/etc/freeradius/3.0/mods-available/eap"
+tls="/etc/freeradius/3.0/sites-available/tls"
+
+sed -i "s|$search|$replace|g" $eap
+sed -i "s|$search|$replace|g" $tls
+
+wifi1="UAECREW1"
+wifi2="UAECREW2"
+wifi="/etc/freeradius/3.0/clients.conf"
+sed -i "s|$wifi1|$wifi2|g" $wifi
+

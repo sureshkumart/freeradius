@@ -1,0 +1,124 @@
+eap {
+	###  Invoke the default supported EAP type when EAP-Identity response is received.
+	default_eap_type = tls
+
+	#  List expiry time (Correlation EAP-Response with packets with EAP-Request packets)
+	timer_expire     = 60
+
+	### Ingore unknown type
+	ignore_unknown_eap_types = yes
+
+	# Handle Cisco AP1230B firmware 12.2(13)JA1 bug.  
+	cisco_accounting_username_bug = no
+
+	#  max_requests from radiusd.conf to prevent DoS.
+	max_sessions = ${max_requests}
+
+	# Supported EAP-types
+
+	# Common TLS configuration for TLS-based EAP types
+	tls-config tls-common {
+		#  server certificate.
+		private_key_file = /etc/freeradius/3.0/certs/CabinCrew/radius/CabinCrew_key.pem
+		certificate_file = /etc/freeradius/3.0/certs/CabinCrew/radius/CabinCrew_cert.pem
+
+		#  Trusted Issuing CA, Root CA and CRL
+		ca_file = /etc/freeradius/3.0/certs/CabinCrew/CA/CabinCrew_CAandCRL_cert.pem
+
+	 	#  When setting "auto_chain = no", the server certificate file MUST include the full certificate chain. (using default)
+		# auto_chain = yes
+
+		dh_file = ${certdir}/dh
+
+		random_file = /dev/urandom
+
+		#  On most APs the MAX packet length is configured between 1500 - 1600 In these cases, fragment size should be 1024 or less.
+		# fragment_size = 1024
+
+		#  include_length is a flag which is by default set to yes 
+		include_length = yes
+
+
+		#  Check the Certificate Revocation List (For test, set to no to avoid replacing every other week)
+		check_crl = yes
+
+		# Check if intermediate CAs have been revoked.
+		# check_all_crl = yes
+
+		ca_path = ${cadir}
+
+		# Accept an expired Certificate Revocation List (commented for testing)
+		allow_expired_crl = no
+
+		#  If check_cert_issuer is set, the value will be checked against the DN of the issuer in the client certificate.  
+	        check_cert_issuer = "/DC=com/DC=emirates/DC=corp/CN=Issuing-CA4"
+
+		# Set this option to specify the allowed TLS cipher suites.  The format is listed in "man 1 ciphers".
+		cipher_list = "HIGH"
+		# cipher_list = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CAMELLIA128-SHA"
+
+		### If enabled, OpenSSL will use server cipher list (possibly defined by cipher_list option above) for choosing right cipher suite rather than using client-specified list
+		cipher_server_preference = no
+
+		#  If your system has OpenSSL 1.1.0 or greater, do NOT use these.  Instead, set tls_min_version and tls_max_version.
+		# disable_tlsv1_2 = no
+		disable_tlsv1_1 = yes
+		disable_tlsv1 = yes
+
+		
+		#  Set min / max TLS version.  
+		#  Allowed values are "1.0", "1.1", and "1.2"
+		tls_min_version = "1.2"
+		# tls_max_version = "1.2"
+
+
+		#  Elliptical cryptography configuration - should be "secp384r1" or "secp521r1"
+		ecdh_curve = "prime256v1"
+
+		#  Session resumption / fast reauthentication cache.
+		cache {
+			enable = no
+			lifetime = 24 # hours
+			name = "EAP-TLS"
+			persist_dir = "${logdir}/tlscache"
+		}
+
+		
+		#  As of version 2.1.10, client certificates can be
+		#  validated via an external command.  This allows
+		#  dynamic CRLs or OCSP to be used.
+		verify {
+			# skip_if_ocsp_ok = no
+
+			# tmpdir = /tmp/radiusd
+			# client = "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
+		}
+
+		#  Certificates can be verified against an OCSP
+		#  Responder. This makes it possible to immediately
+		#  revoke certificates without the distribution of
+		#  new Certificate Revocation Lists (CRLs).
+		#
+		ocsp {
+			enable = no
+			override_cert_url = yes
+			url = "http://127.0.0.1/ocsp/"
+			# use_nonce = yes
+			# timeout = 0
+			# softfail = no
+		}
+	}
+
+	## EAP-TLS
+	tls {
+		# Point to the common TLS configuration
+		tls = tls-common
+
+		# As part of checking a client certificate, the EAP-TLS
+		# sets some attributes such as TLS-Client-Cert-CN. This
+		# virtual server has access to these attributes, and can
+		# be used to accept or reject the request.
+		#virtual_server = check-eap-tls
+	}
+
+}
